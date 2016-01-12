@@ -29,14 +29,14 @@ shinyUI(
                                       uiOutput("lamp")
                                     ),
                                     mainPanel(
-                                      
+                                     
                                       plotOutput('plot'),
                                       tableOutput('filterTable'),
                                       plotOutput('newPlot')
-                                      
+                                    
                                     )
                       )
-                      
+             
              ),
              tabPanel("Upload",
                       sidebarLayout(position="left",
@@ -64,8 +64,8 @@ shinyUI(
                                                      Fluorochromes = 'Fluorochromes',
                                                      Filter = 'Filter'
                                                      
-                                                   )
-                                      ),
+                                                     )
+                                                   ),
                                       uiOutput('filtertype'),
                                       
                                       p("Choose what kind of data you want to add, then click a button below"),
@@ -81,12 +81,12 @@ shinyUI(
                                       
                                     )
                                     
-                                    
+                        
                       )
-             )
-             
-             
+               )
+  
+  
   ))
-
+  
 
 

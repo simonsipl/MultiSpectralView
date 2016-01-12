@@ -1,4 +1,3 @@
-
 ##TODO LIST
 # Zapisywanie plików csv po akceptacji !! -> DONE
 # ulepszenie wyświetlania plotów -> DONE
@@ -11,6 +10,7 @@
 library(data.table)
 library(shiny)
 library(ggplot2)
+library(flux)
 #hmm ? sprawdzić to na dole
 #library(ggvis)
 
@@ -153,20 +153,20 @@ shinyServer(function(input, output) {
       {
         path_fluorochrome = paste('./Fluorochromes/',fluorochrome_name , sep = "")
         data_plot_f <- read.csv(path_fluorochrome)
-        path_filter = paste('./Filters/',filter_ex_name , sep = "")
-        data_plot_filter <- read.csv(path_filter)
+        path_filter_ex = paste('./Filters/',filter_ex_name , sep = "")
+        data_plot_filter_ex <- read.csv(path_filter_ex)
         fluoro_ex = data_plot_f
         
         
         for(i in 1:length(data_plot_f$Wavelength))
         {
-          if(length(data_plot_filter$Excitation[which(data_plot_filter$Wavelength == data_plot_f$Wavelength[i])])==0)
+          if(length(data_plot_filter_ex$Excitation[which(data_plot_filter_ex$Wavelength == data_plot_f$Wavelength[i])])==0)
           {
             fluoro_ex$Excitation[i] = 0
           }
           else
           {
-            fluoro_ex$Excitation[i] = (data_plot_f$Excitation[i]/100) * data_plot_filter$Excitation[which(data_plot_filter$Wavelength==data_plot_f$Wavelength[i])] 
+            fluoro_ex$Excitation[i] = data_plot_f$Excitation[i] * (100-sum(data_plot_filter_ex$Excitation[which(data_plot_filter_ex$Wavelength==data_plot_f$Wavelength[i])]))/100
           }
         }
         #fluoro_ex$Excitation = dnorm(fluoro_ex$Excitation)
@@ -190,19 +190,20 @@ shinyServer(function(input, output) {
       {
         path_fluorochrome = paste('./Fluorochromes/',fluorochrome_name , sep = "")
         data_plot_f <- read.csv(path_fluorochrome)
-        path_filter = paste('./Filters/',filter_em_name , sep = "")
-        data_plot_filter <- read.csv(path_filter)
+        path_filter_em = paste('./Filters/',filter_em_name , sep = "")
+        data_plot_filter_em <- read.csv(path_filter_em)
         fluoro_em = data_plot_f
         
         for(i in 1:length(data_plot_f$Wavelength))
         {
-          if(length(data_plot_filter$Emission[which(data_plot_filter$Emission == data_plot_f$Emission[i])])==0)
+          if(length(data_plot_filter_em$Emission[which(data_plot_filter_em$Emission == data_plot_f$Emission[i])])==0)
           {
-            fluoro_em$Emission[i] = 0
+            
+            fluoro_em$Emission[i] = data_plot_f$Emission[i] * (100-sum(data_plot_filter_em$Emission[which(data_plot_filter_em$Wavelength==data_plot_f$Wavelength[i])])) /100
           }
           else
           {
-            fluoro_em$Emission[i] = (data_plot_f$Emission[i]/100) * data_plot_filter$Emission[which(data_plot_filter$Wavelength==data_plot_f$Wavelength[i])] 
+            fluoro_em$Emission[i] = 0
           }
         }
         #fluoro_em$Emission = dnorm(fluoro_em$Emission)
@@ -216,22 +217,24 @@ shinyServer(function(input, output) {
       p2 <- NULL
       #,fill = Emission
       
+      
       #Wczytane dane przedstawione jako Emisja i Ekscytacja
-      if(!is.null(data_plot_f$Emission))
-      {
-        p2 <-  geom_line(aes(x=Wavelength,y=Emission),color ='blue' ,alpha=0.5)
-      }
+      
       if(!is.null(data_plot_f$Excitation))
       {
-        p1 <-  geom_line(aes(x=Wavelength,y=Excitation),color ='red' ,alpha=0.5) 
+        p1 <- geom_ribbon(data=data_plot_f,aes(x=Wavelength,ymin=0,ymax=Excitation,colour="Filter Excitation"),fill ='red' ,alpha=0.1)
+      }
+      if(!is.null(data_plot_f$Emission))
+      {
+        p2 <- geom_ribbon(data=data_plot_f,aes(x=Wavelength,ymin=0,ymax=Emission,colour="Filter Emission"),fill ='blue' ,alpha=0.1)
       }
       #p1 <-  geom_line(aes(x=Wavelength,y=Excitation),color ='red',fill="red" ,alpha=0.5) 
       #p2 <-  geom_line(aes(x=Wavelength,y=Emission),color ='blue',fill="blue" ,alpha=0.5)
-      p <- ggplot(data_plot_f) +p1 +p2
+      p <- ggplot() +p1 +p2
       print(p)
     }
-    }
-    
+  }
+  
   )
   
   ##Algorithms Functions
@@ -279,7 +282,7 @@ shinyServer(function(input, output) {
       p("Choose Type of a filter")
       radioButtons("filtertype","Filter Type",
                    c(Emission = "filterem",  Excitation = "filterex")
-                   )
+      )
       
     }
     else
@@ -321,6 +324,7 @@ shinyServer(function(input, output) {
     k_ex = "Brak"
     k_em = "Brak"
     resultTable = c()
+    data_plot_f <- NULL
     
     if(is.null(fluorochrome_name) || fluorochrome_name == "Choose")
     {
@@ -336,28 +340,28 @@ shinyServer(function(input, output) {
       {
         path_fluorochrome = paste('./Fluorochromes/',fluorochrome_name , sep = "")
         data_plot_f <- read.csv(path_fluorochrome)
-        path_filter = paste('./Filters/',filter_ex_name , sep = "")
-        data_plot_filter <- read.csv(path_filter)
+        path_filter_ex = paste('./Filters/',filter_ex_name , sep = "")
+        data_plot_filter_ex <- read.csv(path_filter_ex)
         fluoro_ex = data_plot_f
-        fluoro_em = data_plot_f
+        
         
         
         
         
         for(i in 1:length(data_plot_f$Wavelength))
         {
-          if(length(data_plot_filter$Excitation[which(data_plot_filter$Wavelength == data_plot_f$Wavelength[i])])==0)
+          if(length(data_plot_filter_ex$Excitation[which(data_plot_filter_ex$Wavelength == data_plot_f$Wavelength[i])])==0)
           {
             fluoro_ex$Excitation[i] = 0
           }
           else
           {
-            fluoro_ex$Excitation[i] = data_plot_f$Excitation[i] * data_plot_filter$Excitation[which(data_plot_filter$Wavelength==data_plot_f$Wavelength[i])]
+            fluoro_ex$Excitation[i] = data_plot_f$Excitation[i] * (100-sum(data_plot_filter_ex$Excitation[which(data_plot_filter_ex$Wavelength==data_plot_f$Wavelength[i])]))
           }
         }
         #fluoro_ex$Excitation = dnorm(fluoro_ex$Excitation)
         k_ex=sum(fluoro_ex$Excitation)/sum(data_plot_f$Excitation) 
-        
+        p_ex=auc(fluoro_ex$Wavelength,fluoro_ex$Excitation)/auc(data_plot_f$Wavelength,data_plot_f$Excitation)
         #data_plot_f$Excitation = fluoro_ex
       }
     }
@@ -374,28 +378,33 @@ shinyServer(function(input, output) {
       }
       else
       {
-        path_fluorochrome = paste('./Fluorochromes/',fluorochrome_name , sep = "")
-        data_plot_f <- read.csv(path_fluorochrome)
-        path_filter = paste('./Filters/',filter_em_name , sep = "")
-        data_plot_filter <- read.csv(path_filter)
+        if(is.null(data_plot_f))
+        {
+          path_fluorochrome = paste('./Fluorochromes/',fluorochrome_name , sep = "")
+          data_plot_f <- read.csv(path_fluorochrome)
+        }
+        
+        path_filter_em = paste('./Filters/',filter_em_name , sep = "")
+        data_plot_filter_em <- read.csv(path_filter_em)
         fluoro_em = data_plot_f
         
         for(i in 1:length(fluoro_em$Wavelength))
         {
-          if(length(data_plot_filter$Emission[which(data_plot_filter$Emission == data_plot_f$Emission[i])])==0)
+          if(length(data_plot_filter_em$Emission[which(data_plot_filter_em$Emission == data_plot_f$Emission[i])])==0)
           {
-            fluoro_em$Emission[i] = 0
+            
+            fluoro_em$Emission[i] = data_plot_f$Emission[i] * (100-sum(data_plot_filter_em$Emission[which(data_plot_filter_em$Wavelength==data_plot_f$Wavelength[i])]))/100
           }
           else
           {
-            fluoro_em$Emission[i] = data_plot_f$Emission[i] * data_plot_filter$Emission[which(data_plot_filter$Wavelength==data_plot_f$Wavelength[i])]
+            fluoro_em$Emission[i] = 0
           }
         }
         #fluoro_em$Emission = dnorm(fluoro_em$Emission)
         k_em=sum(fluoro_em$Emission)/sum(data_plot_f$Emission) 
-        
-      #  fluoro_em$Excitation = rnorm(fluoro_em$Excitation,mean=0)
-      #  k_em=sum(fluoro_em$Emission)/sum(data_plot_f$Emission) * 100
+        p_em=auc(fluoro_em$Wavelength,fluoro_em$Emission)/auc(data_plot_f$Wavelength,data_plot_f$Emission)*100
+        #  fluoro_em$Excitation = rnorm(fluoro_em$Excitation,mean=0)
+        #  k_em=sum(fluoro_em$Emission)/sum(data_plot_f$Emission) * 100
         
       }
       
@@ -404,31 +413,31 @@ shinyServer(function(input, output) {
     
     if(k_ex != "Brak")
     {
-      resultTable = c(k_ex,resultTable)
+      resultTable = c(k_ex,p_ex,resultTable)
     }
     else
     {
-      resultTable = c('',resultTable)
+      resultTable = c('','',resultTable)
     }
     if(k_em != "Brak")
     {
-      resultTable = c(k_em,resultTable)
+      resultTable = c(k_em,p_em,resultTable)
     }
     else
     {
-      resultTable = c('',resultTable)
+      resultTable = c('','',resultTable)
     }
     
     
-    t=matrix(resultTable)
+    t=matrix(resultTable,ncol=2)
     t[]=ifelse(!is.na(as.numeric(t)),format(as.numeric(t),digits=3),t)
-    colnames(t)=c("Filter [%]")
-    rownames(t)=c("emmission","excitation")
+    rownames(t)=c("Quality index","Filter [%]")
+    colnames(t)=c("emmission","excitation")
     t=as.table(t)
     
-   
+    
   })
- 
+  
   
   ##Plot Section
   
@@ -469,8 +478,8 @@ shinyServer(function(input, output) {
       data_plot_em <- read.csv(path)
       p3 <- geom_ribbon(data=data_plot_em,aes(x=Wavelength,ymin=0,ymax=Excitation,colour="Filter Excitation"),fill ='green' ,alpha=0.1)
       p4 <- geom_ribbon(data=data_plot_em,aes(x=Wavelength,ymin=0,ymax=Emission,colour="Filter Emission"),fill ='darkolivegreen1' ,alpha=0.1)
-     #p3 <-  geom_line(data=data_plot_em,aes(x=Wavelength,y=Excitation),color ='green' ,alpha=0.5) 
-     #p4 <-  geom_line(data=data_plot_em,aes(x=Wavelength,y=Emission),color ='black' ,alpha=0.5)
+      #p3 <-  geom_line(data=data_plot_em,aes(x=Wavelength,y=Excitation),color ='green' ,alpha=0.5) 
+      #p4 <-  geom_line(data=data_plot_em,aes(x=Wavelength,y=Emission),color ='black' ,alpha=0.5)
       generate_plot_allow = TRUE
     }
     if(is.null(filter_ex_name) || filter_ex_name == "Choose")
@@ -482,8 +491,8 @@ shinyServer(function(input, output) {
     {
       path = paste('./Filters/',filter_ex_name , sep = "")
       data_plot_ex <- read.csv(path)
-     #p5 <-  geom_line(data=data_plot_ex,aes(x=Wavelength,y=Excitation),color ='yellow' ,alpha=0.5) 
-     #p6 <-  geom_line(data=data_plot_ex,aes(x=Wavelength,y=Emission),color ='violet' ,alpha=0.5)
+      #p5 <-  geom_line(data=data_plot_ex,aes(x=Wavelength,y=Excitation),color ='yellow' ,alpha=0.5) 
+      #p6 <-  geom_line(data=data_plot_ex,aes(x=Wavelength,y=Emission),color ='violet' ,alpha=0.5)
       p5 <- geom_ribbon(data=data_plot_ex,aes(x=Wavelength,ymin=0,ymax=Excitation,colour="Filter Excitation"),fill ='yellow' ,alpha=0.1)
       p6 <- geom_ribbon(data=data_plot_ex,aes(x=Wavelength,ymin=0,ymax=Emission,colour="Filter Emission"),fill ='violet' ,alpha=0.1)
       generate_plot_allow = TRUE
@@ -560,26 +569,26 @@ shinyServer(function(input, output) {
       #multiplot <-dget("multiplot.R")
       
       #p<-multiplot(p1,p2, cols=2)
-      }
+    }
     print(p)
     
     
   })
   
   
- 
   
   
   
   
   
   
-           
-           
-           
   
   
   
   
-
+  
+  
+  
+  
+  
 })
